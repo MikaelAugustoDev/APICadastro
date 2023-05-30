@@ -10,7 +10,7 @@ app.use(express.json());
 app.use(cors({ origin: "*" }));
 
 app.get("/", (req, res) => {
-    res.status(200).json({msg: "Bem Vindo ao Home"});
+    res.status(200).json({msg: "Home"});
 });
 
 app.post("/cadastro", async (req, res) => {
@@ -18,11 +18,11 @@ app.post("/cadastro", async (req, res) => {
     const {email, senha} = req.body;
 
     if(!email) {
-        return res.status(404).json({msg: "Email é obrigatorio"});
+        return res.status(404).json({msg: "O email é obrigatorio"});
     }
 
     if(!senha) {
-        return res.status(404).json({msg: "A senha é obrigatorio"});
+        return res.status(404).json({msg: "A senha é obrigatoria"});
     }
 
     const userExiste = await User.findOne({ where: { email: email } });
@@ -45,7 +45,7 @@ app.post("/cadastro", async (req, res) => {
 
         await user.save();
 
-        res.status(201).json({msg: "Usuario criado com sucesso"});
+        res.status(201).json({msg: "Usuario cadastrado com sucesso"});
 
     }catch(err) {
 
@@ -54,5 +54,34 @@ app.post("/cadastro", async (req, res) => {
         res.status(500).json({msg: "erro"});
     }
 });
+
+app.post("/login", async (req, res) => {
+
+    const {email, senha} = req.body;
+
+    if(!email) {
+        return res.status(404).json({msg: "O email é obrigatorio"});
+    }
+
+    if(!senha) {
+        return res.status(404).json({msg: "A senha é obrigatoria"});
+    }
+
+    const user = await User.findOne({where: {email: email}});
+
+    if(!user) {
+        return res.status(404).json({msg: "Usuario não encontrado"}); 
+    }
+
+    const checksenha= await bcrypt.compare(senha, user.senha);
+
+    if(!checksenha) {
+        return res.status(404).json({msg: "Senha invalida"});
+    }
+
+    return res.status(200).json({msg: "Usuario logado com sucesso"});
+
+});
+
 
 app.listen(PORT, () => console.log("http://localhost:3000"));
