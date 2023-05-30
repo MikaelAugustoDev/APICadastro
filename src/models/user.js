@@ -1,6 +1,6 @@
 const { Sequelize, sequelize } = require("../db");
 
-const User = sequelize.define("user", {
+const User = sequelize.define("users", {
     email: {
         type: Sequelize.STRING
     },
@@ -9,6 +9,6 @@ const User = sequelize.define("user", {
     }
 });
 
-User.sync({force: true});
+User.sync();
 
 module.exports = User;
