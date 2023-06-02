@@ -1,8 +1,15 @@
 const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
+const { Pool } = require("pg");
+const pooli = require("./db");
 
-const User = require("./models/user");
+const dbUrl = "postgres://mikael:35mnFkyn2wTXkMFiXjfbt2JpmdRbchWy@dpg-chr77f9mbg5e1f0g47tg-a.oregon-postgres.render.com/users_wwzx";
+
+const pool = new Pool({
+    connectionString: dbUrl,
+});
+
 const PORT = 3000;
 const app = express();
 
@@ -14,7 +21,6 @@ app.get("/", (req, res) => {
 });
 
 app.post("/cadastro", async (req, res) => {
-
     const {email, senha} = req.body;
 
     if(!email) {
@@ -25,38 +31,28 @@ app.post("/cadastro", async (req, res) => {
         return res.status(404).json({msg: "A senha é obrigatoria"});
     }
 
-    const userExiste = await User.findOne({ where: { email: email } });
-    
-    console.log(userExiste);
-
-    if(userExiste) {
-        return res.status(404).json({msg: "Email já cadastrado"}); 
-    }
-
-    const salt = await bcrypt.genSalt(12);
-    const senhaHash = await bcrypt.hash(senha, salt);
-
-    const user = new User({
-        email,
-        senha: senhaHash,
-    });
-
     try {
+        const query = "SELECT * FROM users WHERE email = $1";
+        const result = await pool.query(query, [email]);
 
-        await user.save();
+        if (result.rows.length > 0) {
+            return res.status(404).json({msg: "Email já cadastrado"}); 
+        }
+
+        const salt = await bcrypt.genSalt(12);
+        const senhaHash = await bcrypt.hash(senha, salt);
+
+        const insertQuery = "INSERT INTO users (email, senha) VALUES ($1, $2)";
+        await pool.query(insertQuery, [email, senhaHash]);
 
         res.status(201).json({msg: "Usuario cadastrado com sucesso"});
-
-    }catch(err) {
-
+    } catch(err) {
         console.log(err);
-
         res.status(500).json({msg: "erro"});
     }
 });
 
 app.post("/login", async (req, res) => {
-
     const {email, senha} = req.body;
 
     if(!email) {
@@ -67,21 +63,26 @@ app.post("/login", async (req, res) => {
         return res.status(404).json({msg: "A senha é obrigatoria"});
     }
 
-    const user = await User.findOne({where: {email: email}});
+    try {
+        const query = "SELECT * FROM users WHERE email = $1";
+        const result = await pool.query(query, [email]);
 
-    if(!user) {
-        return res.status(404).json({msg: "Usuario não encontrado"}); 
+        if (result.rows.length === 0) {
+            return res.status(404).json({msg: "Usuario não encontrado"}); 
+        }
+
+        const user = result.rows[0];
+        const checksenha = await bcrypt.compare(senha, user.senha);
+
+        if(!checksenha) {
+            return res.status(404).json({msg: "Senha invalida"});
+        }
+
+        return res.status(200).json({msg: "Usuario logado com sucesso"});
+    } catch(err) {
+        console.log(err);
+        res.status(500).json({msg: "erro"});
     }
-
-    const checksenha= await bcrypt.compare(senha, user.senha);
-
-    if(!checksenha) {
-        return res.status(404).json({msg: "Senha invalida"});
-    }
-
-    return res.status(200).json({msg: "Usuario logado com sucesso"});
-
 });
 
-
-app.listen(PORT, () => console.log("http://localhost:3000"));
+app.listen(PORT, () => console.log(`Server rodando em http://localhost:${PORT}`));
