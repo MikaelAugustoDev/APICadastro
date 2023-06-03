@@ -1,9 +1,10 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const pool = require("../db");
-const app = express();
 
-app.post("/login", async (req, res) => {
+const router = express.Router();
+
+router.post("/", async (req, res) => {
     const { email, senha } = req.body;
 
     if (!email) {
@@ -35,3 +36,5 @@ app.post("/login", async (req, res) => {
         res.status(500).json({ msg: "erro" });
     }
 });
+
+module.exports = router;
